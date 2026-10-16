@@ -43,7 +43,6 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
   signal?.addEventListener("abort", abort, { once: true });
   let playback: Promise<void> = Promise.resolve();
   try {
-    if (context.state === "suspended") await context.resume();
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +53,8 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
       const detail = await response.text().catch(() => "");
       throw new Error(detail || `TTS failed: ${response.status}`);
     }
+    const context = new AudioContext({ sampleRate: 24000 });
+    if (context.state === "suspended") await context.resume();
     let buffer = "";
     const onEvent = (data: string) => {
       const payload = JSON.parse(data) as Delta;
