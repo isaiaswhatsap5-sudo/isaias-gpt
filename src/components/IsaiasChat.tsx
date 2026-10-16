@@ -69,7 +69,7 @@ export default function IsaiasChat() {
   useEffect(() => {
     if (!messages.length || busy) return;
     setConvos((prev) => {
-      const firstText = messages[0].parts.find((p) => p.type === "text") as { text: string } | undefined;
+      const firstText = messages[0]!.parts.find((p) => p.type === "text") as { text: string } | undefined;
       const title = (firstText?.text || "Conversa com anexos").slice(0, 48);
       const next = [{ id: currentId, title, messages, updatedAt: Date.now() }, ...prev.filter((c) => c.id !== currentId)];
       try { localStorage.setItem(STORE, JSON.stringify(next)); } catch {
@@ -135,25 +135,45 @@ export default function IsaiasChat() {
     if (id === currentId) newChat();
   }
 
-  function toggleMic() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return alert("O teu navegador não suporta reconhecimento de voz.");
+  const [transcribing, setTranscribing] = useState(false);
+  async function toggleMic() {
     if (listening) return recRef.current?.stop();
-    const rec = new SR();
-    rec.lang = "pt-PT";
-    rec.interimResults = true;
-    const base = input;
-    rec.onresult = (e: any) => {
-      const t = Array.from(e.results).map((r: any) => r[0].transcript).join("");
-      setInput((base ? base + " " : "") + t);
+    if (!navigator.mediaDevices?.getUserMedia) return alert("Este navegador não permite usar o microfone.");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return alert("Acesso ao microfone negado. Permite o microfone nas definições do navegador (ícone do cadeado ao lado do endereço) e tenta outra vez.");
+    }
+    const rec = new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      setListening(false);
+      const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+      if (!blob.size) return;
+      setTranscribing(true);
+      try {
+        const fd = new FormData();
+        const ext = blob.type.includes("mp4") ? "mp4" : blob.type.includes("ogg") ? "ogg" : "webm";
+        fd.append("file", new File([blob], `voz.${ext}`, { type: blob.type.split(";")[0] || "audio/webm" }));
+        const r = await fetch("/api/transcribe", { method: "POST", body: fd });
+        const j = await r.json();
+        if (j.text) {
+          if (voiceMode) submit(j.text);
+          else setInput((v) => (v ? v + " " : "") + j.text);
+        } else if (j.error) alert(j.error);
+      } finally {
+        setTranscribing(false);
+      }
     };
-    rec.onend = () => setListening(false);
     recRef.current = rec;
     rec.start();
     setListening(true);
   }
 
-  const statusLabel = status === "submitted" ? "A pensar…" : status === "streaming" ? "A responder…" : status === "error" ? "Erro" : listening ? "A ouvir…" : "Online";
+  const statusLabel = status === "submitted" ? "A pensar…" : status === "streaming" ? "A responder…" : status === "error" ? "Erro" : listening ? "A ouvir…" : transcribing ? "A transcrever…" : "Online";
   const empty = messages.length === 0;
 
   return (
@@ -232,6 +252,32 @@ export default function IsaiasChat() {
                         ) : (
                           <div key={i} className="mb-2 flex items-center gap-2 text-sm"><FileText size={16} /> {p.filename}</div>
                         );
+                      if (p.type === "tool-mostrar_imagens") {
+                        const imgs = (p as any).output?.images as { url: string; page: string; title: string }[] | undefined;
+                        if ((p as any).state !== "output-available")
+                          return <div key={i} className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[0, 1, 2, 3].map((k) => <div key={k} className="aspect-square animate-pulse rounded-xl bg-secondary" />)}</div>;
+                        if (!imgs?.length) return null;
+                        return (
+                          <div key={i} className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {imgs.map((im) => (
+                              <a key={im.url} href={im.page} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-border">
+                                <img src={im.url} alt={im.title} loading="lazy" className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105" />
+                              </a>
+                            ))}
+                          </div>
+                        );
+                      }
+                      if (p.type === "tool-pesquisar_wikipedia") {
+                        const st = (p as any).state;
+                        const res = (p as any).output?.results as { title: string; url: string }[] | undefined;
+                        if (st !== "output-available") return <p key={i} className="mb-2 animate-pulse text-xs text-muted-foreground">A pesquisar fontes…</p>;
+                        if (!res?.length) return null;
+                        return (
+                          <div key={i} className="mb-3 flex flex-wrap gap-2">
+                            {res.slice(0, 3).map((r) => <a key={r.url} href={r.url} target="_blank" rel="noreferrer" className="rounded-full border border-border px-3 py-1 text-xs text-primary hover:border-primary">📖 {r.title}</a>)}
+                          </div>
+                        );
+                      }
                       return null;
                     })}
                   </div>
@@ -281,7 +327,8 @@ export default function IsaiasChat() {
             <div className="flex items-center gap-1">
               <input ref={fileRef} type="file" multiple accept="image/*,application/pdf,text/*" hidden onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
               <button onClick={() => fileRef.current?.click()} disabled={files.length >= MAX_FILES} className="rounded-lg p-2 text-muted-foreground hover:text-primary disabled:opacity-40" aria-label="Anexar"><Paperclip size={18} /></button>
-              <button onClick={toggleMic} className={`rounded-lg p-2 ${listening ? "animate-pulse text-primary" : "text-muted-foreground hover:text-primary"}`} aria-label="Microfone"><Mic size={18} /></button>
+              <button onClick={toggleMic} className={`rounded-lg p-2 ${listening ? "animate-pulse text-primary" : "text-muted-foreground hover:text-primary"}`} aria-label="Microfone" title={listening ? "Toca para parar" : "Falar"}>{listening ? <Square size={18} /> : <Mic size={18} />}</button>
+              {listening && <span className="text-xs text-primary">A gravar… toca para enviar</span>}
               <span className="ml-2 hidden text-xs text-muted-foreground sm:inline">Enter para enviar · Shift+Enter nova linha</span>
               {busy ? (
                 <button onClick={() => stop()} className="ml-auto flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary" aria-label="Parar"><Square size={16} /></button>

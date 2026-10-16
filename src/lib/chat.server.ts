@@ -1,5 +1,28 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import { convertToModelMessages, stepCountIs, streamText, tool, type UIMessage } from "ai";
+import { z } from "zod";
+
+async function searchImages(query: string) {
+  const url = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=8&gsrsearch=${encodeURIComponent(query + " filetype:bitmap")}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640`;
+  const res = await fetch(url, { headers: { "User-Agent": "IsaiasGPT/1.0" } });
+  if (!res.ok) return [];
+  const data: any = await res.json();
+  return Object.values(data?.query?.pages ?? {})
+    .map((p: any) => ({
+      url: p.imageinfo?.[0]?.thumburl as string,
+      page: p.imageinfo?.[0]?.descriptionurl as string,
+      title: String(p.title || "").replace(/^File:|\.[a-z]+$/gi, ""),
+    }))
+    .filter((i) => i.url && /\.(jpe?g|png|webp)/i.test(i.url))
+    .slice(0, 4);
+}
+
+async function searchWiki(query: string) {
+  const res = await fetch(`https://pt.wikipedia.org/w/api.php?action=query&format=json&origin=*&list=search&srlimit=4&srsearch=${encodeURIComponent(query)}`, { headers: { "User-Agent": "IsaiasGPT/1.0" } });
+  if (!res.ok) return [];
+  const data: any = await res.json();
+  return (data?.query?.search ?? []).map((r: any) => ({ title: r.title, snippet: String(r.snippet).replace(/<[^>]+>/g, ""), url: `https://pt.wikipedia.org/wiki/${encodeURIComponent(r.title.replace(/ /g, "_"))}` }));
+}
 
 const RUN_ID = "X-Lovable-AIG-Run-ID";
 const MODEL = "openai/gpt-6-astra";
@@ -9,10 +32,11 @@ Personalidade: inteligente, educado, prestável, confiante, profissional e amig�
 Responde sempre em português correto (compreendes português de Moçambique, Portugal e Brasil, e linguagem informal com erros ortográficos). Se o utilizador escrever noutra língua, podes acompanhá-lo.
 Usa formatação Markdown adequada: títulos, listas, tabelas, exemplos e blocos de código quando útil. Sê breve em perguntas simples e detalhado em questões complexas.
 Quando receberes imagens ou documentos, analisa-os com atenção ao conteúdo real.
-Nunca inventes factos. Se não tiveres informação suficiente, di-lo claramente. Nunca afirmes ter executado ações (enviar emails, pesquisar na Internet, abrir aplicações) que não realizaste — não tens acesso a essas ferramentas nesta versão.`;
+Nunca inventes factos. Se não tiveres informação suficiente, di-lo claramente. Nunca afirmes ter executado ações (enviar emails, pesquisar na Internet, abrir aplicações) que não realizaste — não tens acesso a essas ferramentas nesta versão.
+FERRAMENTAS (OBRIGATÓRIO): ANTES de escrever a resposta, sempre que a pergunta for sobre algo visual ou concreto (pessoas, lugares, animais, objetos, monumentos, ciência, história, natureza, tecnologia), chama a ferramenta mostrar_imagens com um termo de pesquisa curto em inglês, para o utilizador ver fotografias reais enquanto lê a resposta. Não chames para conversa casual, código ou matemática pura. Usa pesquisar_wikipedia para factos atuais ou específicos que não saibas com certeza, e cita a fonte. Não coloques links de imagens no texto: a interface já as mostra.`;
 
 export async function handleChat(request: Request) {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) return new Response("Configuração de IA em falta.", { status: 500 });
 
   const { messages } = (await request.json()) as { messages: UIMessage[] };
@@ -36,6 +60,19 @@ export async function handleChat(request: Request) {
     instructions: INSTRUCTIONS,
     messages: await convertToModelMessages(messages),
     abortSignal: request.signal,
+    stopWhen: stepCountIs(4),
+    tools: {
+      mostrar_imagens: tool({
+        description: "Procura fotografias reais relacionadas com o tema e mostra-as ao utilizador.",
+        inputSchema: z.object({ query: z.string().describe("Termo de pesquisa curto, em inglês") }),
+        execute: async ({ query }) => ({ images: await searchImages(query).catch(() => []) }),
+      }),
+      pesquisar_wikipedia: tool({
+        description: "Pesquisa a Wikipédia em português para obter factos verificáveis.",
+        inputSchema: z.object({ query: z.string() }),
+        execute: async ({ query }) => ({ results: await searchWiki(query).catch(() => []) }),
+      }),
+    },
     providerOptions: {
       openai: {
         forceReasoning: true,
