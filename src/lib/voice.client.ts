@@ -29,7 +29,7 @@ function feedSse(chunk: string, onEvent: (data: string) => void) {
 
 export async function streamSpeech(endpoint: string, text: string, signal?: AbortSignal): Promise<void> {
   signal?.throwIfAborted();
-  const context = new AudioContext({ sampleRate: 24000 });
+  let context: AudioContext | undefined;
   const sources = new Set<AudioBufferSourceNode>();
   let playhead = 0;
   let pending = new Uint8Array(0);
@@ -53,7 +53,7 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
       const detail = await response.text().catch(() => "");
       throw new Error(detail || `TTS failed: ${response.status}`);
     }
-    const context = new AudioContext({ sampleRate: 24000 });
+    context = new AudioContext({ sampleRate: 24000 });
     if (context.state === "suspended") await context.resume();
     let buffer = "";
     const onEvent = (data: string) => {
@@ -109,6 +109,6 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
     signal?.removeEventListener("abort", abort);
     controller.abort();
     for (const source of sources) source.stop();
-    await context.close();
+    await context?.close();
   }
 }
