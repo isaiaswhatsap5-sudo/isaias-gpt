@@ -1,3 +1,4 @@
+import { createClientOnlyFn } from "@tanstack/react-start";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -8,6 +9,12 @@ import {
   GraduationCap, Code2, Languages, PenLine, Calculator, ListChecks,
 } from "lucide-react";
 import logo from "@/assets/isaias-logo.png";
+
+// Voz de IA: função só-de-navegador (devolve undefined no servidor)
+const playVoice = createClientOnlyFn(async (text: string, signal?: AbortSignal) => {
+  const { streamSpeech } = await import("@/lib/voice.client");
+  await streamSpeech("/api/tts", text, signal);
+});
 
 type Convo = { id: string; title: string; messages: UIMessage[]; updatedAt: number };
 const STORE = "isaias-convos";
@@ -100,8 +107,7 @@ export default function IsaiasChat() {
     setSpeaking(true);
     (async () => {
       try {
-        const { streamSpeech } = await import("@/lib/voice.client");
-        await streamSpeech("/api/tts", text, ac.signal);
+        await playVoice(text, ac.signal);
       } catch (e) {
         if (!ac.signal.aborted) console.error("Voz:", e);
       } finally {

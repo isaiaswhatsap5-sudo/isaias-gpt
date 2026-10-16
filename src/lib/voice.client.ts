@@ -29,7 +29,7 @@ function feedSse(chunk: string, onEvent: (data: string) => void) {
 
 export async function streamSpeech(endpoint: string, text: string, signal?: AbortSignal): Promise<void> {
   signal?.throwIfAborted();
-  const context = new AudioContext({ sampleRate: 24000 });
+  let context: AudioContext | undefined;
   const sources = new Set<AudioBufferSourceNode>();
   let playhead = 0;
   let pending = new Uint8Array(0);
@@ -43,7 +43,6 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
   signal?.addEventListener("abort", abort, { once: true });
   let playback: Promise<void> = Promise.resolve();
   try {
-    if (context.state === "suspended") await context.resume();
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +53,8 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
       const detail = await response.text().catch(() => "");
       throw new Error(detail || `TTS failed: ${response.status}`);
     }
+    context = new AudioContext({ sampleRate: 24000 });
+    if (context.state === "suspended") await context.resume();
     let buffer = "";
     const onEvent = (data: string) => {
       const payload = JSON.parse(data) as Delta;
@@ -68,11 +69,11 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
       pending = new Uint8Array(decoded.pending);
       if (!decoded.samples.length) return;
       samplesPlayed += decoded.samples.length;
-      const b = context.createBuffer(1, decoded.samples.length, 24000);
+      const b = context!.createBuffer(1, decoded.samples.length, 24000);
       b.copyToChannel(decoded.samples, 0);
-      const source = context.createBufferSource();
+      const source = context!.createBufferSource();
       source.buffer = b;
-      source.connect(context.destination);
+      source.connect(context!.destination);
       sources.add(source);
       playback = new Promise<void>((resolve) => {
         source.onended = () => {
@@ -80,7 +81,7 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
           resolve();
         };
       });
-      playhead = Math.max(playhead, context.currentTime + 0.05);
+      playhead = Math.max(playhead, context!.currentTime + 0.05);
       source.start(playhead);
       playhead += b.duration;
     };
@@ -108,6 +109,6 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
     signal?.removeEventListener("abort", abort);
     controller.abort();
     for (const source of sources) source.stop();
-    await context.close();
+    await context?.close();
   }
 }
