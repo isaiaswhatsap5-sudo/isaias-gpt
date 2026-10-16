@@ -69,7 +69,7 @@ export default function IsaiasChat() {
   useEffect(() => {
     if (!messages.length || busy) return;
     setConvos((prev) => {
-      const firstText = messages[0].parts.find((p) => p.type === "text") as { text: string } | undefined;
+      const firstText = messages[0]!.parts.find((p) => p.type === "text") as { text: string } | undefined;
       const title = (firstText?.text || "Conversa com anexos").slice(0, 48);
       const next = [{ id: currentId, title, messages, updatedAt: Date.now() }, ...prev.filter((c) => c.id !== currentId)];
       try { localStorage.setItem(STORE, JSON.stringify(next)); } catch {
@@ -157,7 +157,7 @@ export default function IsaiasChat() {
       try {
         const fd = new FormData();
         const ext = blob.type.includes("mp4") ? "mp4" : blob.type.includes("ogg") ? "ogg" : "webm";
-        fd.append("file", new File([blob], `voz.${ext}`, { type: blob.type.split(";")[0] }));
+        fd.append("file", new File([blob], `voz.${ext}`, { type: blob.type.split(";")[0] || "audio/webm" }));
         const r = await fetch("/api/transcribe", { method: "POST", body: fd });
         const j = await r.json();
         if (j.text) {
