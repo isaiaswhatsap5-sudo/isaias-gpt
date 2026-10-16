@@ -13,7 +13,7 @@ type Convo = { id: string; title: string; messages: UIMessage[]; updatedAt: numb
 const STORE = "isaias-convos";
 const MAX_FILES = 6;
 const WELCOME =
-  "Olá! Eu sou o ISAÍAS GPT, o teu assistente pessoal de inteligência artificial. Estou pronto para conversar contigo, responder às tuas perguntas, analisar imagens, ajudar nos teus projetos e encontrar soluções para os teus problemas. O que vamos fazer hoje?";
+  "Olá! Eu sou o ISAÍAS GPT — o teu assistente, tipo um J.A.R.V.I.S. mas com sotaque nosso. Fala comigo como se fosses falar com um amigo: perguntas, ideias, uma foto de um exercício, o que tu quiseres. Em que andamos hoje?";
 const SHORTCUTS = [
   { icon: GraduationCap, label: "Estudos", prompt: "Ajuda-me a estudar: explica de forma simples " },
   { icon: Code2, label: "Programar", prompt: "Ajuda-me com este código: " },
@@ -81,35 +81,33 @@ export default function IsaiasChat() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // voice mode: speak finished assistant reply
+  // voice mode: fala a resposta com voz de IA real (streaming, soa como uma pessoa)
   const lastSpoken = useRef<string>("");
+  const voiceAbort = useRef<AbortController | null>(null);
+  const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
     if (!voiceMode || busy) return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== "assistant" || lastSpoken.current === last.id) return;
     lastSpoken.current = last.id;
     const text = last.parts.filter((p) => p.type === "text").map((p: any) => p.text).join(" ")
-      .replace(/```[\s\S]*?```/g, " (código) ").replace(/[#*_`>|]/g, "");
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "pt-PT";
-    // Voz estilo J.A.R.V.I.S.: masculina, calma e grave
-    const pickVoice = () => {
-      const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("pt"));
-      if (!voices.length) return;
-      const maleHints = ["daniel", "male", "homem", "masculina", "ricardo", "joaquim", "felipe", "luciana".replace("luciana", "")];
-      const pick =
-        voices.find((v) => maleHints.some((h) => v.name.toLowerCase().includes(h))) ||
-        voices.find((v) => v.lang === "pt-PT") ||
-        voices[0]!;
-      u.voice = pick;
-    };
-    pickVoice();
-    if (!u.voice) speechSynthesis.addEventListener("voiceschanged", pickVoice, { once: true });
-    u.rate = 0.95;
-    u.pitch = 0.75;
-    u.volume = 1;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+      .replace(/```[\s\S]*?```/g, " (código) ").replace(/https?:\/\/\S+/g, "")
+      .replace(/[#*_`>|]/g, "").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+    if (!text) return;
+    voiceAbort.current?.abort();
+    const ac = new AbortController();
+    voiceAbort.current = ac;
+    setSpeaking(true);
+    (async () => {
+      try {
+        const { streamSpeech } = await import("@/lib/voice.client");
+        await streamSpeech("/api/tts", text, ac.signal);
+      } catch (e) {
+        if (!ac.signal.aborted) console.error("Voz:", e);
+      } finally {
+        if (voiceAbort.current === ac) setSpeaking(false);
+      }
+    })();
   }, [messages, busy, voiceMode]);
 
   async function addFiles(list: FileList | File[]) {
@@ -189,7 +187,7 @@ export default function IsaiasChat() {
     setListening(true);
   }
 
-  const statusLabel = status === "submitted" ? "A pensar…" : status === "streaming" ? "A responder…" : status === "error" ? "Erro" : listening ? "A ouvir…" : transcribing ? "A transcrever…" : "Online";
+  const statusLabel = status === "submitted" ? "A pensar…" : status === "streaming" ? "A responder…" : status === "error" ? "Erro" : listening ? "A ouvir…" : transcribing ? "A transcrever…" : speaking ? "A falar…" : "Online";
   const empty = messages.length === 0;
 
   return (
@@ -232,7 +230,7 @@ export default function IsaiasChat() {
             <span className={`h-2 w-2 rounded-full ${status === "error" ? "bg-destructive" : "bg-primary"} ${busy || listening ? "animate-pulse" : ""}`} />
             {statusLabel}
           </div>
-          <button onClick={() => { setVoiceMode((v) => !v); speechSynthesis.cancel(); }} className={`rounded-lg p-2 transition ${voiceMode ? "text-primary shadow-glow" : "text-muted-foreground hover:text-primary"}`} aria-label="Modo de voz" title="Modo de voz: ler respostas em voz alta">
+          <button onClick={() => { setVoiceMode((v) => !v); voiceAbort.current?.abort(); setSpeaking(false); }} className={`rounded-lg p-2 transition ${voiceMode ? "text-primary shadow-glow" : "text-muted-foreground hover:text-primary"}`} aria-label="Modo de voz" title="Modo de voz: respostas faladas com voz de IA">
             {voiceMode ? <Volume2 size={20} /> : <VolumeX size={20} />}
           </button>
         </header>
