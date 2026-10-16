@@ -116,3 +116,17 @@
     min-height: 100vh;
   }
 }
+
+.prose-isaias { line-height: 1.7; }
+.prose-isaias > * + * { margin-top: 0.8em; }
+.prose-isaias h1, .prose-isaias h2, .prose-isaias h3 { font-family: var(--font-display); color: var(--primary); letter-spacing: .04em; font-size: 1.05rem; margin-top: 1.2em; }
+.prose-isaias ul { list-style: disc; padding-left: 1.4em; }
+.prose-isaias ol { list-style: decimal; padding-left: 1.4em; }
+.prose-isaias a { color: var(--primary); text-decoration: underline; }
+.prose-isaias strong { color: var(--primary); font-weight: 600; }
+.prose-isaias code { background: var(--secondary); padding: .1em .35em; border-radius: .35em; font-size: .9em; }
+.prose-isaias pre { background: var(--popover); border: 1px solid var(--border); padding: 1em; border-radius: .75rem; overflow-x: auto; }
+.prose-isaias pre code { background: none; padding: 0; }
+.prose-isaias table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.prose-isaias th, .prose-isaias td { border: 1px solid var(--border); padding: .4em .7em; text-align: left; }
+.prose-isaias th { background: var(--secondary); }
