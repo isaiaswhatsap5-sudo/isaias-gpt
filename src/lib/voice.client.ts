@@ -69,11 +69,11 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
       pending = new Uint8Array(decoded.pending);
       if (!decoded.samples.length) return;
       samplesPlayed += decoded.samples.length;
-      const b = context.createBuffer(1, decoded.samples.length, 24000);
+      const b = context!.createBuffer(1, decoded.samples.length, 24000);
       b.copyToChannel(decoded.samples, 0);
-      const source = context.createBufferSource();
+      const source = context!.createBufferSource();
       source.buffer = b;
-      source.connect(context.destination);
+      source.connect(context!.destination);
       sources.add(source);
       playback = new Promise<void>((resolve) => {
         source.onended = () => {
@@ -81,7 +81,7 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
           resolve();
         };
       });
-      playhead = Math.max(playhead, context.currentTime + 0.05);
+      playhead = Math.max(playhead, context!.currentTime + 0.05);
       source.start(playhead);
       playhead += b.duration;
     };
