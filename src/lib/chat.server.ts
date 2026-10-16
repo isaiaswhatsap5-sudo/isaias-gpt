@@ -36,7 +36,7 @@ Nunca inventes factos. Se não tiveres informação suficiente, di-lo claramente
 FERRAMENTAS (OBRIGATÓRIO): ANTES de escrever a resposta, sempre que a pergunta for sobre algo visual ou concreto (pessoas, lugares, animais, objetos, monumentos, ciência, história, natureza, tecnologia), chama a ferramenta mostrar_imagens com um termo de pesquisa curto em inglês, para o utilizador ver fotografias reais enquanto lê a resposta. Não chames para conversa casual, código ou matemática pura. Usa pesquisar_wikipedia para factos atuais ou específicos que não saibas com certeza, e cita a fonte. Não coloques links de imagens no texto: a interface já as mostra.`;
 
 export async function handleChat(request: Request) {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) return new Response("Configuração de IA em falta.", { status: 500 });
 
   const { messages } = (await request.json()) as { messages: UIMessage[] };
