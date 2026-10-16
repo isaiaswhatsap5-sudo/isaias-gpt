@@ -10,11 +10,12 @@ export const Route = createFileRoute("/api/tts")({
 
         let text = "";
         try {
-          ({ text } = (await request.json()) as { text?: string });
+          const body = (await request.json()) as { text?: string };
+          text = String(body.text ?? "");
         } catch {
           return new Response("Pedido inválido.", { status: 400 });
         }
-        text = String(text ?? "").trim();
+        text = text.trim();
         if (!text) return new Response("Texto vazio.", { status: 400 });
         if (text.length > 4000) text = text.slice(0, 4000);
 
