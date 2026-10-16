@@ -92,6 +92,22 @@ export default function IsaiasChat() {
       .replace(/```[\s\S]*?```/g, " (código) ").replace(/[#*_`>|]/g, "");
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "pt-PT";
+    // Voz estilo J.A.R.V.I.S.: masculina, calma e grave
+    const pickVoice = () => {
+      const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith("pt"));
+      if (!voices.length) return;
+      const maleHints = ["daniel", "male", "homem", "masculina", "ricardo", "joaquim", "felipe", "luciana".replace("luciana", "")];
+      const pick =
+        voices.find((v) => maleHints.some((h) => v.name.toLowerCase().includes(h))) ||
+        voices.find((v) => v.lang === "pt-PT") ||
+        voices[0]!;
+      u.voice = pick;
+    };
+    pickVoice();
+    if (!u.voice) speechSynthesis.addEventListener("voiceschanged", pickVoice, { once: true });
+    u.rate = 0.95;
+    u.pitch = 0.75;
+    u.volume = 1;
     speechSynthesis.cancel();
     speechSynthesis.speak(u);
   }, [messages, busy, voiceMode]);
