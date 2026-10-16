@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  Paperclip, Mic, Send, Square, Plus, PanelLeft, Volume2, VolumeX, X, FileText, Trash2,
+  Paperclip, Mic, Send, Square, Plus, PanelLeft, Volume2, VolumeX, X, FileText, Trash2, Phone,
   GraduationCap, Code2, Languages, PenLine, Calculator, ListChecks,
 } from "lucide-react";
 import logo from "@/assets/isaias-logo.png";
@@ -218,6 +218,13 @@ export default function IsaiasChat() {
             </div>
           ))}
         </nav>
+        <footer className="border-t border-border px-4 py-3">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Criado por</p>
+          <p className="mt-1 text-sm font-medium text-foreground">Isaías Edson Muiambo</p>
+          <a href="https://wa.me/258875417210" target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1.5 text-xs text-primary transition hover:underline">
+            <Phone size={12} /> 87 541 7210
+          </a>
+        </footer>
       </aside>
       {sidebar && <div className="fixed inset-0 z-20 bg-background/60 lg:hidden" onClick={() => setSidebar(false)} />}
 
@@ -253,6 +260,12 @@ export default function IsaiasChat() {
                   </button>
                 ))}
               </div>
+              <p className="mt-10 text-xs text-muted-foreground">
+                Criado por <span className="text-primary">Isaías Edson Muiambo</span> ·{" "}
+                <a href="https://wa.me/258875417210" target="_blank" rel="noreferrer" className="transition hover:underline">
+                  87 541 7210
+                </a>
+              </p>
             </div>
           ) : (
             <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">

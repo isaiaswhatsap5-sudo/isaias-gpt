@@ -10,6 +10,25 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "O teu assistente de inteligência artificial inspirado no JARVIS." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "author", content: "Isaías Edson Muiambo" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: "ISAÍAS GPT",
+          applicationCategory: "AssistantApplication",
+          inLanguage: "pt",
+          url: "https://isaias-gpt.lovable.app",
+          creator: {
+            "@type": "Person",
+            name: "Isaías Edson Muiambo",
+            telephone: "+258875417210",
+          },
+        }),
+      },
     ],
   }),
   component: IsaiasChat,
