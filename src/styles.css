@@ -182,3 +182,25 @@ body::before {
   body { animation: none; }
   body::before { display: none; }
 }
+
+
+/* Braços articulados do robô ISAÍAS GPT */
+.robot-arm-left, .robot-arm-right {
+  transform-box: view-box;
+  transition: transform .35s ease-in-out;
+}
+.robot-arm-left { transform-origin: 48px 104px; }
+.robot-arm-right { transform-origin: 152px 104px; }
+.robot-talking .robot-arm-left { animation: robot-arm-wave-left 1.15s ease-in-out infinite alternate; }
+.robot-talking .robot-arm-right { animation: robot-arm-wave-right 1.15s ease-in-out infinite alternate; }
+@keyframes robot-arm-wave-left {
+  from { transform: rotate(-3deg); }
+  to { transform: rotate(-13deg); }
+}
+@keyframes robot-arm-wave-right {
+  from { transform: rotate(3deg); }
+  to { transform: rotate(13deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .robot-talking .robot-arm-left, .robot-talking .robot-arm-right { animation: none; }
+}
