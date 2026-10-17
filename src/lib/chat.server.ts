@@ -24,8 +24,7 @@ async function searchWiki(query: string) {
   return (data?.query?.search ?? []).map((r: any) => ({ title: r.title, snippet: String(r.snippet).replace(/<[^>]+>/g, ""), url: `https://pt.wikipedia.org/wiki/${encodeURIComponent(r.title.replace(/ /g, "_"))}` }));
 }
 
-const RUN_ID = "X-Lovable-AIG-Run-ID";
-const MODEL = "openai/gpt-6-astra";
+const MODEL = "gemini-3.8-flash";
 
 const INSTRUCTIONS = `És o ISAÍAS GPT, um assistente pessoal de inteligência artificial avançado, inspirado no JARVIS, mas com identidade própria.
 FALAS COMO UMA PESSOA REAL, DESCONTRAÍDA: és um amigo inteligente a conversar, não uma máquina nem um manual. Usa linguagem natural e do dia a dia, com humor leve quando encaixa ("pronto", "olha", "boa pergunta", "deixa-te contar uma coisa"). Evita respostas robóticas, formais demais ou cheias de burocracia. Em conversa normal, escreve em texto corrido, curto e com personalidade — sem títulos, sem listas enormes, sem parecer um relatório. Se o tema for sério (saúde, segurança, dinheiro), respeita o tom e sê claro.
@@ -37,27 +36,19 @@ QUEM TE CRIOU (diz isto com orgulho, sempre que te apresentares ou te perguntare
 FERRAMENTAS (OBRIGATÓRIO): ANTES de escrever a resposta, sempre que a pergunta for sobre algo visual ou concreto (pessoas, lugares, animais, objetos, monumentos, ciência, história, natureza, tecnologia), chama a ferramenta mostrar_imagens com um termo de pesquisa curto em inglês, para o utilizador ver fotografias reais enquanto lê a resposta. Não chames para conversa casual, código ou matemática pura. Usa pesquisar_wikipedia para factos atuais ou específicos que não saibas com certeza, e cita a fonte. Não coloques links de imagens no texto: a interface já as mostra.`;
 
 export async function handleChat(request: Request) {
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) return new Response("Configuração de IA em falta.", { status: 500 });
+  const apiKey = process.env["GEMINI_API_KEY"];
+  if (!apiKey) {
+    return new Response("Configuração em falta: adiciona GEMINI_API_KEY às variáveis de ambiente do servidor.", { status: 500 });
+  }
 
   const { messages } = (await request.json()) as { messages: UIMessage[] };
-  let runId = request.headers.get(RUN_ID)?.trim() || undefined;
-
   const provider = createOpenAI({
-    baseURL: "https://ai.gateway.lovable.dev/v1",
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
     apiKey,
-    headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: async (input, init) => {
-      const headers = new Headers(init?.headers);
-      if (runId && !headers.has(RUN_ID)) headers.set(RUN_ID, runId);
-      const res = await fetch(input, { ...init, headers });
-      runId ??= res.headers.get(RUN_ID)?.trim() || undefined;
-      return res;
-    },
   });
 
   const result = streamText({
-    model: provider.responses(MODEL),
+    model: provider.chat(MODEL),
     instructions: INSTRUCTIONS,
     messages: await convertToModelMessages(messages),
     abortSignal: request.signal,
@@ -74,25 +65,14 @@ export async function handleChat(request: Request) {
         execute: async ({ query }) => ({ results: await searchWiki(query).catch(() => []) }),
       }),
     },
-    providerOptions: {
-      openai: {
-        forceReasoning: true,
-        reasoningEffort: "low",
-        reasoningSummary: "auto",
-        store: false,
-        include: ["reasoning.encrypted_content"],
-      },
-    },
   });
 
   return result.toUIMessageStreamResponse({
-    sendReasoning: true,
     onError: (err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      if (/402|payment required/i.test(msg)) return "Créditos de IA esgotados. Adiciona créditos ao espaço de trabalho para continuar.";
-      if (/429/.test(msg)) return "Muitos pedidos de uma vez. Aguarda um momento e tenta novamente.";
-      if (/403/.test(msg)) return "O acesso ao modelo de IA foi recusado.";
-      return "Ocorreu um erro ao gerar a resposta.";
+      if (/429|resource_exhausted|quota/i.test(msg)) return "O limite temporário da API Gemini foi atingido. Aguarda um pouco e tenta novamente.";
+      if (/401|403|api key|permission denied/i.test(msg)) return "A chave Gemini não é válida ou não tem permissão. Verifica GEMINI_API_KEY nas variáveis de ambiente.";
+      return "Ocorreu um erro ao gerar a resposta. Tenta novamente daqui a pouco.";
     },
   });
 }
