@@ -140,3 +140,45 @@
 .prose-isaias table { width: 100%; border-collapse: collapse; font-size: .9em; }
 .prose-isaias th, .prose-isaias td { border: 1px solid var(--border); padding: .4em .7em; text-align: left; }
 .prose-isaias th { background: var(--secondary); }
+
+
+/* ISAÍAS GPT — animated futuristic background */
+@keyframes isaias-bg-drift {
+  0% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+  50% { background-position: 35% 20%, 65% 80%, 100% 0%; }
+  100% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+}
+@keyframes isaias-grid-pan {
+  from { transform: perspective(700px) rotateX(58deg) translateY(-2%); }
+  to { transform: perspective(700px) rotateX(58deg) translateY(2%); }
+}
+@keyframes isaias-glow-breathe {
+  0%, 100% { opacity: .28; }
+  50% { opacity: .58; }
+}
+body {
+  background-image:
+    radial-gradient(ellipse at 15% 20%, oklch(0.34 0.16 245 / 42%), transparent 42%),
+    radial-gradient(ellipse at 85% 75%, oklch(0.3 0.16 205 / 32%), transparent 40%),
+    radial-gradient(ellipse at 50% 50%, oklch(0.19 0.08 265 / 65%), oklch(0.09 0.03 258) 78%);
+  background-size: 180% 180%, 180% 180%, 100% 100%;
+  animation: isaias-bg-drift 22s ease-in-out infinite;
+  isolation: isolate;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .22;
+  background-image:
+    linear-gradient(oklch(0.8 0.12 210 / 14%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.8 0.12 210 / 14%) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+}
+@media (prefers-reduced-motion: reduce) {
+  body { animation: none; }
+  body::before { display: none; }
+}
