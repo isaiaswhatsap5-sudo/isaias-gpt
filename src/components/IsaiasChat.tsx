@@ -250,7 +250,7 @@ export default function IsaiasChat() {
       >
         <header className="flex items-center gap-3 border-b border-border px-4 py-3">
           <button onClick={() => setSidebar((s) => !s)} className="rounded-lg p-2 text-muted-foreground hover:text-primary" aria-label="Menu"><PanelLeft size={20} /></button>
-          {!empty && <div className="h-8 w-8"><Core active={busy} size={32} /></div>}
+          {!empty && <div className="h-8 w-8"><Core active={busy || speaking} size={32} /></div>}
           <h1 className="font-display text-sm font-bold tracking-[0.25em] text-primary">ISAÍAS GPT</h1>
           <div className="ml-auto flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
             <span className={`h-2 w-2 rounded-full ${status === "error" ? "bg-destructive" : "bg-primary"} ${busy || listening ? "animate-pulse" : ""}`} />
@@ -264,7 +264,7 @@ export default function IsaiasChat() {
         <div className="flex-1 overflow-y-auto">
           {empty ? (
             <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pt-10 text-center">
-              <Core active={busy} size={200} />
+              <Core active={busy || speaking} size={200} />
               <p className="mt-8 text-lg leading-relaxed text-secondary-foreground">{WELCOME}</p>
               <div className="mt-8 grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
                 {SHORTCUTS.map(({ icon: Icon, label, prompt }) => (
