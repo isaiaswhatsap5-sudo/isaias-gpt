@@ -41,11 +41,23 @@ const readDataUrl = (f: File) =>
 
 function Core({ active, size = 180 }: { active: boolean; size?: number }) {
   return (
-    <div className={`relative ${active ? "core-active" : ""}`} style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-full border border-primary/30 ring-spin" style={{ borderTopColor: "var(--primary)" }} />
-      <div className="absolute inset-[12%] rounded-full border border-dashed border-primary/40 ring-spin-rev" />
-      <div className="absolute inset-[24%] rounded-full border border-accent/50 ring-spin" style={{ borderRightColor: "var(--accent)" }} />
-      <div className="absolute inset-[30%] rounded-full core-orb" />
+    <div className={`robot relative ${active ? "robot-talking" : ""}`} style={{ width: size, height: size }} aria-hidden>
+      <div className="absolute inset-[8%] rounded-full bg-primary/20 blur-xl" />
+      <svg viewBox="0 0 200 200" className="robot-float relative h-full w-full">
+        <circle cx="100" cy="22" r="7" fill="var(--accent)" className="robot-antenna" />
+        <rect x="98" y="28" width="4" height="16" rx="2" fill="var(--primary)" opacity=".7" />
+        <circle cx="26" cy="100" r="11" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        <circle cx="174" cy="100" r="11" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        <rect x="34" y="44" width="132" height="114" rx="52" fill="var(--card)" stroke="var(--primary)" strokeWidth="3" />
+        <rect x="48" y="60" width="104" height="84" rx="38" fill="var(--background)" stroke="var(--border)" strokeWidth="2" />
+        <g className="robot-eyes" fill="var(--primary)">
+          <ellipse cx="78" cy="92" rx="10" ry="13" />
+          <ellipse cx="122" cy="92" rx="10" ry="13" />
+        </g>
+        <circle cx="64" cy="114" r="6" fill="var(--accent)" opacity=".35" />
+        <circle cx="136" cy="114" r="6" fill="var(--accent)" opacity=".35" />
+        <path className="robot-mouth" d="M 82 116 Q 100 132 118 116" fill="none" stroke="var(--primary)" strokeWidth="4" strokeLinecap="round" />
+      </svg>
     </div>
   );
 }
@@ -238,7 +250,7 @@ export default function IsaiasChat() {
       >
         <header className="flex items-center gap-3 border-b border-border px-4 py-3">
           <button onClick={() => setSidebar((s) => !s)} className="rounded-lg p-2 text-muted-foreground hover:text-primary" aria-label="Menu"><PanelLeft size={20} /></button>
-          {!empty && <div className="h-8 w-8"><Core active={busy} size={32} /></div>}
+          {!empty && <div className="h-8 w-8"><Core active={busy || speaking} size={32} /></div>}
           <h1 className="font-display text-sm font-bold tracking-[0.25em] text-primary">ISAÍAS GPT</h1>
           <div className="ml-auto flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
             <span className={`h-2 w-2 rounded-full ${status === "error" ? "bg-destructive" : "bg-primary"} ${busy || listening ? "animate-pulse" : ""}`} />
@@ -252,7 +264,7 @@ export default function IsaiasChat() {
         <div className="flex-1 overflow-y-auto">
           {empty ? (
             <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pt-10 text-center">
-              <Core active={busy} size={200} />
+              <Core active={busy || speaking} size={200} />
               <p className="mt-8 text-lg leading-relaxed text-secondary-foreground">{WELCOME}</p>
               <div className="mt-8 grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
                 {SHORTCUTS.map(({ icon: Icon, label, prompt }) => (
