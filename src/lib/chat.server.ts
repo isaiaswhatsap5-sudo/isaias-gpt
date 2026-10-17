@@ -89,7 +89,7 @@ export async function handleChat(request: Request) {
     sendReasoning: true,
     onError: (err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      if (/402/.test(msg)) return "Créditos de IA esgotados. Adiciona créditos ao espaço de trabalho para continuar.";
+      if (/402|payment required/i.test(msg)) return "Créditos de IA esgotados. Adiciona créditos ao espaço de trabalho para continuar.";
       if (/429/.test(msg)) return "Muitos pedidos de uma vez. Aguarda um momento e tenta novamente.";
       if (/403/.test(msg)) return "O acesso ao modelo de IA foi recusado.";
       return "Ocorreu um erro ao gerar a resposta.";
