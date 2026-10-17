@@ -2,6 +2,9 @@ import { createClientOnlyFn } from "@tanstack/react-start";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -63,6 +66,9 @@ function Core({ active, size = 180 }: { active: boolean; size?: number }) {
 }
 
 export default function IsaiasChat() {
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [convos, setConvos] = useState<Convo[]>([]);
   const [currentId, setCurrentId] = useState(() => uid());
   const [sidebar, setSidebar] = useState(false);
@@ -78,6 +84,27 @@ export default function IsaiasChat() {
   const transport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
   const { messages, sendMessage, status, stop, setMessages, error } = useChat({ id: currentId, transport });
   const busy = status === "submitted" || status === "streaming";
+
+  // Exige uma sessão válida antes de abrir o assistente.
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSignedIn(Boolean(data.session));
+      setAuthChecked(true);
+      if (!data.session) navigate({ to: "/auth", replace: true });
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      setSignedIn(Boolean(session));
+      setAuthChecked(true);
+      if (!session) navigate({ to: "/auth", replace: true });
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   useEffect(() => {
     try { setConvos(JSON.parse(localStorage.getItem(STORE) || "[]")); } catch {}
@@ -208,6 +235,17 @@ export default function IsaiasChat() {
   const statusLabel = status === "submitted" ? "A pensar…" : status === "streaming" ? "A responder…" : status === "error" ? "Erro" : listening ? "A ouvir…" : transcribing ? "A transcrever…" : speaking ? "A falar…" : "Online";
   const empty = messages.length === 0;
 
+  if (!authChecked || !signedIn) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center px-4 text-foreground">
+        <div className="glass rounded-2xl px-8 py-6 text-center shadow-glow">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+          <p className="text-sm text-muted-foreground">A verificar a tua sessão…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-dvh overflow-hidden text-foreground">
       {/* Sidebar */}
@@ -258,6 +296,14 @@ export default function IsaiasChat() {
           </div>
           <button onClick={() => { setVoiceMode((v) => !v); voiceAbort.current?.abort(); setSpeaking(false); }} className={`rounded-lg p-2 transition ${voiceMode ? "text-primary shadow-glow" : "text-muted-foreground hover:text-primary"}`} aria-label="Modo de voz" title="Modo de voz: respostas faladas com voz de IA">
             {voiceMode ? <Volume2 size={20} /> : <VolumeX size={20} />}
+          </button>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/auth", replace: true }); }}
+            className="rounded-lg p-2 text-muted-foreground transition hover:text-primary"
+            aria-label="Terminar sessão"
+            title="Terminar sessão"
+          >
+            <LogOut size={19} />
           </button>
         </header>
 
