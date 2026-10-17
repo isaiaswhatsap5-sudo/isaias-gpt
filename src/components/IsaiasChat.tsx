@@ -20,7 +20,7 @@ type Convo = { id: string; title: string; messages: UIMessage[]; updatedAt: numb
 const STORE = "isaias-convos";
 const MAX_FILES = 6;
 const WELCOME =
-  "Olá! Eu sou o ISAÍAS GPT — o teu assistente, tipo um J.A.R.V.I.S. mas com sotaque nosso. Fala comigo como se fosses falar com um amigo: perguntas, ideias, uma foto de um exercício, o que tu quiseres. Em que andamos hoje?";
+  "Olá! Eu sou o ISAÍAS GPT — o teu assistente, tipo um J.A.R.V.I.S. mas com sotaque nosso. Quem me criou foi o Isaías Edson Muiambo, um miúdo da 11ª classe com umas imaginações bem futuristas e espetaculares. Fala comigo como se fosses falar com um amigo: perguntas, ideias, uma foto de um exercício, o que tu quiseres. Em que andamos hoje?";
 const SHORTCUTS = [
   { icon: GraduationCap, label: "Estudos", prompt: "Ajuda-me a estudar: explica de forma simples " },
   { icon: Code2, label: "Programar", prompt: "Ajuda-me com este código: " },
@@ -221,6 +221,7 @@ export default function IsaiasChat() {
         <footer className="border-t border-border px-4 py-3">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Criado por</p>
           <p className="mt-1 text-sm font-medium text-foreground">Isaías Edson Muiambo</p>
+          <p className="text-[11px] leading-snug text-muted-foreground">Estudante da 11ª classe · imaginações futuristas</p>
           <a href="https://wa.me/258875417210" target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1.5 text-xs text-primary transition hover:underline">
             <Phone size={12} /> 87 541 7210
           </a>
