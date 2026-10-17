@@ -47,7 +47,23 @@ function Core({ active, size = 180 }: { active: boolean; size?: number }) {
   return (
     <div className={`robot relative ${active ? "robot-talking" : ""}`} style={{ width: size, height: size }} aria-hidden>
       <div className="absolute inset-[8%] rounded-full bg-primary/20 blur-xl" />
-      <svg viewBox="0 0 200 200" className="robot-float relative h-full w-full">
+      <svg viewBox="0 0 200 200" className="robot-float relative h-full w-full overflow-visible">
+        <g className="robot-arm-left">
+          <path d="M 48 104 L 30 119 L 19 143" fill="none" stroke="var(--background)" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 48 104 L 30 119 L 19 143" fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="30" cy="119" r="7" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+          <circle cx="19" cy="143" r="6" fill="var(--accent)" stroke="var(--primary)" strokeWidth="2" />
+          <path d="M 19 143 L 12 151 M 19 143 L 10 142 M 19 143 L 20 155 M 19 143 L 27 149" fill="none" stroke="var(--primary)" strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx="48" cy="104" r="9" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        </g>
+        <g className="robot-arm-right">
+          <path d="M 152 104 L 170 119 L 181 143" fill="none" stroke="var(--background)" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 152 104 L 170 119 L 181 143" fill="none" stroke="var(--primary)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="170" cy="119" r="7" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+          <circle cx="181" cy="143" r="6" fill="var(--accent)" stroke="var(--primary)" strokeWidth="2" />
+          <path d="M 181 143 L 173 149 M 181 143 L 180 155 M 181 143 L 190 142 M 181 143 L 188 151" fill="none" stroke="var(--primary)" strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx="152" cy="104" r="9" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        </g>
         <circle cx="100" cy="22" r="7" fill="var(--accent)" className="robot-antenna" />
         <rect x="98" y="28" width="4" height="16" rx="2" fill="var(--primary)" opacity=".7" />
         <circle cx="26" cy="100" r="11" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
