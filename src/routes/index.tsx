@@ -26,6 +26,7 @@ export const Route = createFileRoute("/")({
             "@type": "Person",
             name: "Isaías Edson Muiambo",
             telephone: "+258875417210",
+            description: "Estudante da 11ª classe com imaginações futuristas e espetaculares.",
           },
         }),
       },
