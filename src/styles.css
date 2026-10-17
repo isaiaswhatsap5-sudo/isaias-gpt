@@ -101,6 +101,16 @@
 @keyframes pulse-core { 50% { transform: scale(1.12); opacity: .85; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 .core-active .core-orb { animation-duration: 1s; }
+.robot svg { filter: drop-shadow(0 0 14px color-mix(in oklch, var(--primary) 45%, transparent)); }
+.robot-float { animation: robot-float 4s ease-in-out infinite; }
+.robot-eyes { transform-origin: 100px 92px; animation: robot-blink 3.6s infinite; }
+.robot-mouth { transform-origin: 100px 120px; }
+.robot-talking .robot-mouth { animation: robot-talk .28s ease-in-out infinite alternate; }
+.robot-antenna { animation: pulse-core 1.6s ease-in-out infinite; transform-origin: 100px 22px; }
+@keyframes robot-float { 50% { transform: translateY(-5%); } }
+@keyframes robot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes robot-talk { from { transform: scaleY(.5); } to { transform: scaleY(1.6) scaleX(1.05); } }
+@media (prefers-reduced-motion: reduce) { .robot-float, .robot-eyes, .robot-talking .robot-mouth, .robot-antenna { animation: none; } }
 .core-active .ring-spin { animation-duration: 4s; }
 
 @layer base {

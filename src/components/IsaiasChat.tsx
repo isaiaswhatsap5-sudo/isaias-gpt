@@ -41,11 +41,23 @@ const readDataUrl = (f: File) =>
 
 function Core({ active, size = 180 }: { active: boolean; size?: number }) {
   return (
-    <div className={`relative ${active ? "core-active" : ""}`} style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-full border border-primary/30 ring-spin" style={{ borderTopColor: "var(--primary)" }} />
-      <div className="absolute inset-[12%] rounded-full border border-dashed border-primary/40 ring-spin-rev" />
-      <div className="absolute inset-[24%] rounded-full border border-accent/50 ring-spin" style={{ borderRightColor: "var(--accent)" }} />
-      <div className="absolute inset-[30%] rounded-full core-orb" />
+    <div className={`robot relative ${active ? "robot-talking" : ""}`} style={{ width: size, height: size }} aria-hidden>
+      <div className="absolute inset-[8%] rounded-full bg-primary/20 blur-xl" />
+      <svg viewBox="0 0 200 200" className="robot-float relative h-full w-full">
+        <circle cx="100" cy="22" r="7" fill="var(--accent)" className="robot-antenna" />
+        <rect x="98" y="28" width="4" height="16" rx="2" fill="var(--primary)" opacity=".7" />
+        <circle cx="26" cy="100" r="11" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        <circle cx="174" cy="100" r="11" fill="var(--secondary)" stroke="var(--primary)" strokeWidth="3" />
+        <rect x="34" y="44" width="132" height="114" rx="52" fill="var(--card)" stroke="var(--primary)" strokeWidth="3" />
+        <rect x="48" y="60" width="104" height="84" rx="38" fill="var(--background)" stroke="var(--border)" strokeWidth="2" />
+        <g className="robot-eyes" fill="var(--primary)">
+          <ellipse cx="78" cy="92" rx="10" ry="13" />
+          <ellipse cx="122" cy="92" rx="10" ry="13" />
+        </g>
+        <circle cx="64" cy="114" r="6" fill="var(--accent)" opacity=".35" />
+        <circle cx="136" cy="114" r="6" fill="var(--accent)" opacity=".35" />
+        <path className="robot-mouth" d="M 82 116 Q 100 132 118 116" fill="none" stroke="var(--primary)" strokeWidth="4" strokeLinecap="round" />
+      </svg>
     </div>
   );
 }
