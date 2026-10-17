@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound, ShieldCheck, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -21,6 +21,7 @@ const playVoice = createClientOnlyFn(async (text: string, signal?: AbortSignal) 
 
 type Convo = { id: string; title: string; messages: UIMessage[]; updatedAt: number };
 const STORE = "isaias-convos";
+const storeKey = (userId: string) => `${STORE}:${userId}`;
 const MAX_FILES = 6;
 const WELCOME =
   "Olá! Eu sou o ISAÍAS GPT — o teu assistente, tipo um J.A.R.V.I.S. mas com sotaque nosso. Quem me criou foi o Isaías Edson Muiambo, um miúdo da 11ª classe com umas imaginações bem futuristas e espetaculares. Fala comigo como se fosses falar com um amigo: perguntas, ideias, uma foto de um exercício, o que tu quiseres. Em que andamos hoje?";
@@ -69,6 +70,13 @@ export default function IsaiasChat() {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [profileMsg, setProfileMsg] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [convos, setConvos] = useState<Convo[]>([]);
   const [currentId, setCurrentId] = useState(() => uid());
   const [sidebar, setSidebar] = useState(false);
@@ -91,12 +99,14 @@ export default function IsaiasChat() {
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       setSignedIn(Boolean(data.session));
+      setAuthUser(data.session?.user ?? null);
       setAuthChecked(true);
       if (!data.session) navigate({ to: "/auth", replace: true });
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       setSignedIn(Boolean(session));
+      setAuthUser(session?.user ?? null);
       setAuthChecked(true);
       if (!session) navigate({ to: "/auth", replace: true });
     });
@@ -107,9 +117,32 @@ export default function IsaiasChat() {
   }, [navigate]);
 
   useEffect(() => {
-    try { setConvos(JSON.parse(localStorage.getItem(STORE) || "[]")); } catch {}
-    setSidebar(window.innerWidth >= 1024);
-  }, []);
+    if (!authUser?.id) return;
+    try { setConvos(JSON.parse(localStorage.getItem(storeKey(authUser.id)) || "[]")); } catch { setConvos([]); }
+    setProfileName(authUser.user_metadata?.display_name || "");
+    setAvatarUrl(authUser.user_metadata?.avatar_url || "");
+  }, [authUser?.id]);
+
+  const isAdmin = authUser?.app_metadata?.role === "admin";
+
+  async function saveProfile() {
+    setProfileSaving(true);
+    setProfileMsg("");
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { display_name: profileName.trim(), avatar_url: avatarUrl.trim() || null },
+      });
+      if (error) throw error;
+      setAuthUser(data.user);
+      setProfileMsg("Perfil atualizado com sucesso.");
+    } catch (err) {
+      setProfileMsg((err as Error).message || "Não foi possível guardar o perfil.");
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  useEffect(() => { setSidebar(window.innerWidth >= 1024); }, []);
 
   // persist current conversation
   useEffect(() => {
@@ -118,12 +151,13 @@ export default function IsaiasChat() {
       const firstText = messages[0]!.parts.find((p) => p.type === "text") as { text: string } | undefined;
       const title = (firstText?.text || "Conversa com anexos").slice(0, 48);
       const next = [{ id: currentId, title, messages, updatedAt: Date.now() }, ...prev.filter((c) => c.id !== currentId)];
-      try { localStorage.setItem(STORE, JSON.stringify(next)); } catch {
-        localStorage.setItem(STORE, JSON.stringify(next.slice(0, 5)));
+      if (!authUser?.id) return prev;
+      try { localStorage.setItem(storeKey(authUser.id), JSON.stringify(next)); } catch {
+        try { localStorage.setItem(storeKey(authUser.id), JSON.stringify(next.slice(0, 5))); } catch {}
       }
       return next;
     });
-  }, [messages, busy, currentId]);
+  }, [messages, busy, currentId, authUser?.id]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -190,7 +224,7 @@ export default function IsaiasChat() {
   function deleteChat(id: string) {
     const next = convos.filter((c) => c.id !== id);
     setConvos(next);
-    localStorage.setItem(STORE, JSON.stringify(next));
+    if (authUser?.id) localStorage.setItem(storeKey(authUser.id), JSON.stringify(next));
     if (id === currentId) newChat();
   }
 
@@ -297,6 +331,10 @@ export default function IsaiasChat() {
           <button onClick={() => { setVoiceMode((v) => !v); voiceAbort.current?.abort(); setSpeaking(false); }} className={`rounded-lg p-2 transition ${voiceMode ? "text-primary shadow-glow" : "text-muted-foreground hover:text-primary"}`} aria-label="Modo de voz" title="Modo de voz: respostas faladas com voz de IA">
             {voiceMode ? <Volume2 size={20} /> : <VolumeX size={20} />}
           </button>
+          <button onClick={() => { setProfileMsg(""); setProfileOpen(true); }} className="rounded-lg p-2 text-muted-foreground transition hover:text-primary" aria-label="Perfil" title="Perfil">
+            {avatarUrl ? <img src={avatarUrl} alt="" className="h-5 w-5 rounded-full object-cover" /> : <UserRound size={19} />}
+          </button>
+          {isAdmin && <button onClick={() => setAdminOpen(true)} className="rounded-lg p-2 text-muted-foreground transition hover:text-primary" aria-label="Painel de administração" title="Painel de administração"><ShieldCheck size={19} /></button>}
           <button
             onClick={async () => { await supabase.auth.signOut(); navigate({ to: "/auth", replace: true }); }}
             className="rounded-lg p-2 text-muted-foreground transition hover:text-primary"
@@ -307,6 +345,40 @@ export default function IsaiasChat() {
           </button>
         </header>
 
+        {profileOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+            <section className="glass w-full max-w-md space-y-4 rounded-2xl p-6 shadow-glow" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+              <div className="flex items-center justify-between">
+                <h2 id="profile-title" className="font-display text-lg font-bold text-primary">O meu perfil</h2>
+                <button onClick={() => setProfileOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:text-primary" aria-label="Fechar"><X size={18} /></button>
+              </div>
+              <p className="text-sm text-muted-foreground">{authUser?.email}</p>
+              <label className="block space-y-1 text-sm"><span>Nome de apresentação</span><input value={profileName} onChange={(e) => setProfileName(e.target.value)} maxLength={60} placeholder="O teu nome" className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 outline-none focus:border-primary" /></label>
+              <label className="block space-y-1 text-sm"><span>Link da foto de perfil (opcional)</span><input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} type="url" placeholder="https://..." className="w-full rounded-xl border border-border bg-background/60 px-4 py-3 outline-none focus:border-primary" /></label>
+              {profileMsg && <p className="text-sm text-primary">{profileMsg}</p>}
+              <button disabled={profileSaving} onClick={saveProfile} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-medium text-primary-foreground disabled:opacity-50"><Save size={16} />{profileSaving ? "A guardar…" : "Guardar perfil"}</button>
+              <p className="text-xs text-muted-foreground">A foto deve ser um link público de imagem. Para recuperar a senha, usa “Esqueceste a senha?” no ecrã de entrada.</p>
+            </section>
+          </div>
+        )}
+        {adminOpen && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+            <section className="glass w-full max-w-lg space-y-4 rounded-2xl p-6 shadow-glow" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+              <div className="flex items-center justify-between">
+                <h2 id="admin-title" className="flex items-center gap-2 font-display text-lg font-bold text-primary"><ShieldCheck size={20} /> Painel de administração</h2>
+                <button onClick={() => setAdminOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:text-primary" aria-label="Fechar"><X size={18} /></button>
+              </div>
+              <div className="space-y-3 rounded-xl border border-border p-4 text-sm">
+                <p><span className="text-muted-foreground">Conta:</span> {authUser?.email || "—"}</p>
+                <p><span className="text-muted-foreground">ID da conta:</span> <span className="break-all">{authUser?.id || "—"}</span></p>
+                <p><span className="text-muted-foreground">Criada em:</span> {authUser?.created_at ? new Date(authUser.created_at).toLocaleString() : "—"}</p>
+                <p><span className="text-muted-foreground">Conversas guardadas neste navegador:</span> {convos.length}</p>
+                <p><span className="text-muted-foreground">Permissão:</span> Administrador</p>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">O painel só aparece para contas cujo campo protegido app_metadata.role esteja definido como “admin” no Supabase. Não atribuas permissões de administrador através de campos editáveis do perfil.</p>
+            </section>
+          </div>
+        )}
         <div className="flex-1 overflow-y-auto">
           {empty ? (
             <div className="mx-auto flex max-w-2xl flex-col items-center px-6 pt-10 text-center">
