@@ -26,7 +26,7 @@ const schema = z.object({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up" | "reset">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -40,6 +40,23 @@ function AuthPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
+    if (mode === "reset") {
+      const validEmail = z.string().trim().email("Email inválido").safeParse(email);
+      if (!validEmail.success) return setMsg({ ok: false, text: "Introduz um email válido." });
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(validEmail.data, {
+          redirectTo: window.location.origin + "/auth",
+        });
+        if (error) throw error;
+        setMsg({ ok: true, text: "Se existir uma conta com esse email, receberás um link para redefinir a senha. Verifica também o spam." });
+      } catch (err) {
+        setMsg({ ok: false, text: (err as Error).message });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     const parsed = schema.safeParse({ email, password, name: mode === "up" ? name : undefined });
     if (!parsed.success) return setMsg({ ok: false, text: parsed.error.issues[0]!.message });
     setLoading(true);
@@ -72,17 +89,18 @@ function AuthPage() {
         <div className="flex flex-col items-center gap-2 text-center">
           <img src={logo} alt="" width={56} height={56} className="h-14 w-14" />
           <h1 className="font-display text-lg font-bold tracking-[0.25em] text-primary">ISAÍAS GPT</h1>
-          <p className="text-sm text-muted-foreground">{mode === "in" ? "Entra na tua conta" : "Cria a tua conta"}</p>
+          <p className="text-sm text-muted-foreground">{mode === "in" ? "Entra na tua conta" : mode === "up" ? "Cria a tua conta" : "Recuperar senha"}</p>
         </div>
         {mode === "up" && <input className={input} placeholder="O teu nome" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />}
         <input className={input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-        <input className={input} type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} required />
+        {mode !== "reset" && <input className={input} type="password" placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} required />}
         {msg && <p className={`text-sm ${msg.ok ? "text-primary" : "text-destructive"}`}>{msg.text}</p>}
         <button disabled={loading} className="w-full rounded-xl bg-primary py-3 font-medium text-primary-foreground shadow-glow disabled:opacity-50">
-          {loading ? "Aguarda…" : mode === "in" ? "Entrar" : "Criar conta"}
+          {loading ? "Aguarda…" : mode === "in" ? "Entrar" : mode === "up" ? "Criar conta" : "Enviar link de recuperação"}
         </button>
+        {mode === "in" && <button type="button" onClick={() => { setMode("reset"); setMsg(null); }} className="w-full text-sm text-muted-foreground hover:text-primary">Esqueceste a senha?</button>}
         <button type="button" onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(null); }} className="w-full text-sm text-muted-foreground hover:text-primary">
-          {mode === "in" ? "Ainda não tens conta? Cria uma" : "Já tens conta? Entra"}
+          {mode === "in" ? "Ainda não tens conta? Cria uma" : mode === "up" ? "Já tens conta? Entra" : "Voltar para entrar"}
         </button>
       </form>
     </div>
